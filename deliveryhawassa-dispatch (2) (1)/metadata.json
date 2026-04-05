@@ -1,0 +1,5 @@
+{
+  "name": "DeliveryHawassa Dispatch",
+  "description": "A simulation of a Telegram bot system for dispatching delivery orders to drivers with real-time status tracking.",
+  "requestFramePermissions": []
+}

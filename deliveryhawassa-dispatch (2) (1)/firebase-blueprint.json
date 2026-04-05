@@ -1,0 +1,136 @@
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "A system user (Super Admin or Dispatcher)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["super_admin", "dispatcher"] },
+        "displayName": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "driver": {
+      "title": "Driver",
+      "description": "A delivery driver profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "isAvailable": { "type": "boolean" },
+        "isVerified": { "type": "boolean" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "rating": { "type": "number" },
+        "totalRatings": { "type": "number" },
+        "registrationData": { "type": "object" }
+      },
+      "required": ["id", "name", "phone", "isAvailable", "isVerified", "location"]
+    },
+    "order": {
+      "title": "Order",
+      "description": "A delivery order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "pickupLocation": { "type": "string" },
+        "deliveryLocation": { "type": "string" },
+        "pickupCoords": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "deliveryCoords": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "status": { "type": "string", "enum": ["pending", "accepted", "arrived", "picked_up", "delivered", "expired", "cancelled"] },
+        "assignedDriverId": { "type": "string" },
+        "price": { "type": "number" },
+        "createdAt": { "type": "number" },
+        "rating": { "type": "number" }
+      },
+      "required": ["id", "customerName", "customerPhone", "pickupLocation", "deliveryLocation", "status", "createdAt"]
+    },
+    "wallet": {
+      "title": "Wallet",
+      "description": "A driver's financial wallet",
+      "type": "object",
+      "properties": {
+        "driverId": { "type": "string" },
+        "balance": { "type": "number" },
+        "totalEarned": { "type": "number" },
+        "lastUpdated": { "type": "number" }
+      },
+      "required": ["driverId", "balance", "totalEarned"]
+    },
+    "payout": {
+      "title": "Payout",
+      "description": "A payout request from a driver",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "driverId": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "requestedAt": { "type": "number" },
+        "processedAt": { "type": "number" }
+      },
+      "required": ["id", "driverId", "amount", "status", "requestedAt"]
+    },
+    "message": {
+      "title": "Message",
+      "description": "A chat message",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderRole": { "type": "string", "enum": ["dispatcher", "driver"] },
+        "text": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["id", "senderId", "senderRole", "text", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "user",
+      "description": "System users and their roles"
+    },
+    "/drivers/{driverId}": {
+      "schema": "driver",
+      "description": "Driver profiles and status"
+    },
+    "/orders/{orderId}": {
+      "schema": "order",
+      "description": "Delivery orders"
+    },
+    "/wallets/{driverId}": {
+      "schema": "wallet",
+      "description": "Driver wallets"
+    },
+    "/payouts/{payoutId}": {
+      "schema": "payout",
+      "description": "Payout requests"
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": "message",
+      "description": "Chat messages between dispatcher and driver"
+    }
+  }
+}

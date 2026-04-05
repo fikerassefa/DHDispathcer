@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: uid (string), email (string), role (string: 'super_admin'|'dispatcher'), displayName (string)
+    //
+    // Collection: drivers
+    // Fields: id (string), name (string), phone (string), isAvailable (bool), isVerified (bool), 
+    //         location (map: {lat: number, lng: number}), rating (number), totalRatings (number)
+    //
+    // Collection: orders
+    // Fields: id (string), customerName (string), customerPhone (string), pickupLocation (string), 
+    //         deliveryLocation (string), pickupCoords (map), deliveryCoords (map), 
+    //         status (string), assignedDriverId (string), price (number), createdAt (number)
+    //
+    // Collection: wallets
+    // Fields: driverId (string), balance (number), totalEarned (number), lastUpdated (number)
+    //
+    // Collection: payouts
+    // Fields: id (string), driverId (string), amount (number), status (string), requestedAt (number)
+    //
+    // Collection: chats
+    // Fields: id (string), senderId (string), senderRole (string), text (string), timestamp (number)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin') || 
+         request.auth.token.email == "fikerassefa16@gmail.com");
+    }
+
+    function isDispatcher() {
+      return isAuthenticated() && 
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'dispatcher') || 
+         isAdmin());
+    }
+
+    function isDriver(driverId) {
+      return isAuthenticated() && request.auth.uid == driverId;
+    }
+
+    // Validation Helpers
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if (isAuthenticated() && isOwner(userId) && 
+        hasRequiredFields(['uid', 'email', 'role']) &&
+        request.resource.data.role in ['super_admin', 'dispatcher'] &&
+        (request.resource.data.role != 'super_admin' || isAdmin())) || isAdmin();
+      allow update: if (isOwner(userId) || isAdmin()) && 
+        (!('role' in request.resource.data) || request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /drivers/{driverId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(driverId);
+      allow update: if isOwner(driverId) || isDispatcher();
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAuthenticated();
+      allow create: if isDispatcher();
+      allow update: if isDispatcher() || 
+        (isAuthenticated() && request.auth.uid == resource.data.assignedDriverId && 
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
+    }
+
+    match /wallets/{driverId} {
+      allow read: if isOwner(driverId) || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /payouts/{payoutId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.driverId || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.driverId;
+      allow update: if isAdmin();
+    }
+
+    match /chats/{chatId}/messages/{messageId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
